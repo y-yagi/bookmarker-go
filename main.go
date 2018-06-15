@@ -8,6 +8,8 @@ import (
 	"time"
 
 	firebase "firebase.google.com/go"
+	runewidth "github.com/mattn/go-runewidth"
+	"github.com/olekukonko/tablewriter"
 	"github.com/y-yagi/configure"
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
@@ -73,6 +75,10 @@ func main() {
 	iter := client.Collection("bookmarks").Documents(ctx)
 	var bookmark Bookmark
 
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetColWidth(80)
+	table.SetHeader([]string{"Title", "URL"})
+
 	for {
 		doc, err := iter.Next()
 		if err == iterator.Done {
@@ -88,8 +94,9 @@ func main() {
 			os.Exit(1)
 		}
 
-		fmt.Printf("[%s](%s)\n", bookmark.Title, bookmark.Url)
+		table.Append([]string{runewidth.Truncate(bookmark.Title, 80, "..."), bookmark.Url})
 	}
+	table.Render()
 }
 
 func msg(err error) int {
