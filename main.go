@@ -2,11 +2,13 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"os"
 	"time"
 
 	firebase "firebase.google.com/go"
+	"github.com/y-yagi/configure"
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
 )
@@ -17,8 +19,43 @@ type Bookmark struct {
 	CreatedAt time.Time `firestore:"createdAt"`
 }
 
+const cmd = "bookmarker"
+
+type config struct {
+	AccountKeyFile string `toml:"account_key_file"`
+}
+
+func init() {
+	if !configure.Exist(cmd) {
+		var cfg config
+		cfg.AccountKeyFile = ""
+		configure.Save(cmd, cfg)
+	}
+}
+
 func main() {
-	opt := option.WithCredentialsFile(os.Getenv("BOOKMARKER_KEY_FILE"))
+	var edit bool
+
+	flag.BoolVar(&edit, "c", false, "edit config")
+	flag.Parse()
+
+	if edit {
+		os.Exit(msg(cmdEdit()))
+	}
+
+	var cfg config
+	err := configure.Load(cmd, &cfg)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
+
+	if cfg.AccountKeyFile == "" {
+		fmt.Printf("please set key file to config file\n")
+		os.Exit(1)
+	}
+
+	opt := option.WithCredentialsFile(cfg.AccountKeyFile)
 	ctx := context.Background()
 	app, err := firebase.NewApp(ctx, nil, opt)
 	if err != nil {
@@ -53,4 +90,21 @@ func main() {
 
 		fmt.Printf("[%s](%s)\n", bookmark.Title, bookmark.Url)
 	}
+}
+
+func msg(err error) int {
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s: %v\n", os.Args[0], err)
+		return 1
+	}
+	return 0
+}
+
+func cmdEdit() error {
+	editor := os.Getenv("EDITOR")
+	if len(editor) == 0 {
+		editor = "vim"
+	}
+
+	return configure.Edit(cmd, editor)
 }

@@ -35,6 +35,12 @@
   version = "v3.1.0"
 
 [[projects]]
+  name = "github.com/BurntSushi/toml"
+  packages = ["."]
+  revision = "b26d9c308763d68093482582cea63d69be07a0f0"
+  version = "v0.3.0"
+
+[[projects]]
   name = "github.com/golang/protobuf"
   packages = [
     "proto",
@@ -55,6 +61,12 @@
   packages = ["."]
   revision = "317e0006254c44a0ac427cc52a0e083ff0b9622f"
   version = "v2.0.0"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/y-yagi/configure"
+  packages = ["."]
+  revision = "af8c97d6cdf2e49423d4fdf57759c87312ce3ce1"
 
 [[projects]]
   name = "go.opencensus.io"
@@ -211,6 +223,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "d4c386d0039ae0a279310af569b1a5d639001d17b22a241b702e7abc9af9419d"
+  inputs-digest = "270128787e7786a37aa10bef65dba275b2b6ece10a12f91181315700479b36ad"
   solver-name = "gps-cdcl"
   solver-version = 1
