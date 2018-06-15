@@ -1,15 +1,19 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"os"
+	"os/exec"
+	"regexp"
+	"strings"
 	"time"
 
 	firebase "firebase.google.com/go"
-	runewidth "github.com/mattn/go-runewidth"
-	"github.com/olekukonko/tablewriter"
 	"github.com/y-yagi/configure"
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
@@ -74,10 +78,7 @@ func main() {
 
 	iter := client.Collection("bookmarks").Documents(ctx)
 	var bookmark Bookmark
-
-	table := tablewriter.NewWriter(os.Stdout)
-	table.SetColWidth(80)
-	table.SetHeader([]string{"Title", "URL"})
+	var bookmarks []Bookmark
 
 	for {
 		doc, err := iter.Next()
@@ -93,10 +94,10 @@ func main() {
 			fmt.Printf("failed to convert to Bookmark\n: %v", err)
 			os.Exit(1)
 		}
-
-		table.Append([]string{runewidth.Truncate(bookmark.Title, 80, "..."), bookmark.Url})
+		bookmarks = append(bookmarks, bookmark)
 	}
-	table.Render()
+
+	os.Exit(msg(show(bookmarks)))
 }
 
 func msg(err error) int {
@@ -114,4 +115,40 @@ func cmdEdit() error {
 	}
 
 	return configure.Edit(cmd, editor)
+}
+
+func show(bookmarks []Bookmark) error {
+	var buf bytes.Buffer
+	var r string
+
+	for _, b := range bookmarks {
+		r += "[" + b.Title + "](" + b.Url + ")\n"
+	}
+
+	if err := runFilter("peco", strings.NewReader(r), &buf); err != nil {
+		return err
+	}
+
+	if buf.Len() == 0 {
+		return errors.New("No bookmark selected")
+	}
+
+	re := regexp.MustCompile(`\((.+?)\)\z`)
+	matched := re.FindAllStringSubmatch(strings.TrimSpace(buf.String()), -1)
+
+	return exec.Command("google-chrome", matched[0][1]).Run()
+}
+
+func runFilter(command string, r io.Reader, w io.Writer) error {
+	command = os.Expand(command, func(s string) string {
+		return os.Getenv(s)
+	})
+
+	cmd := exec.Command("sh", "-c", command)
+
+	cmd.Stderr = os.Stderr
+	cmd.Stdout = w
+	cmd.Stdin = r
+
+	return cmd.Run()
 }
