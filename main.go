@@ -51,12 +51,16 @@ func main() {
 	flag.Parse()
 
 	if edit {
-		os.Exit(msg(cmdEdit()))
+		if err := editConfig(); err != nil {
+			fmt.Printf("%v\n", err)
+			os.Exit(1)
+		}
+		os.Exit(0)
 	}
 
 	err := configure.Load(cmd, &cfg)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		fmt.Printf("failed to load config: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -65,54 +69,20 @@ func main() {
 		os.Exit(1)
 	}
 
-	opt := option.WithCredentialsFile(cfg.AccountKeyFile)
-	ctx := context.Background()
-	app, err := firebase.NewApp(ctx, nil, opt)
-	if err != nil {
-		fmt.Printf("error initializing app: %v", err)
-		os.Exit(1)
-	}
-
-	client, err := app.Firestore(ctx)
-	if err != nil {
-		fmt.Printf("error get client: %v", err)
-		os.Exit(1)
-	}
-	defer client.Close()
-
-	iter := client.Collection("bookmarks").Documents(ctx)
-	var bookmark Bookmark
 	var bookmarks []Bookmark
-
-	for {
-		doc, err := iter.Next()
-		if err == iterator.Done {
-			break
-		}
-		if err != nil {
-			fmt.Printf("failed to iterate\n: %v", err)
-			os.Exit(1)
-		}
-
-		if err := doc.DataTo(&bookmark); err != nil {
-			fmt.Printf("failed to convert to Bookmark\n: %v", err)
-			os.Exit(1)
-		}
-		bookmarks = append(bookmarks, bookmark)
+	if err = fetchBookmarks(&bookmarks); err != nil {
+		fmt.Printf("%v\n", err)
+		os.Exit(1)
 	}
 
-	os.Exit(msg(show(bookmarks)))
-}
-
-func msg(err error) int {
-	if err != nil {
+	if err := show(&bookmarks); err != nil {
 		fmt.Fprintf(os.Stderr, "%s: %v\n", os.Args[0], err)
-		return 1
+		os.Exit(1)
 	}
-	return 0
+	os.Exit(0)
 }
 
-func cmdEdit() error {
+func editConfig() error {
 	editor := os.Getenv("EDITOR")
 	if len(editor) == 0 {
 		editor = "vim"
@@ -121,11 +91,47 @@ func cmdEdit() error {
 	return configure.Edit(cmd, editor)
 }
 
-func show(bookmarks []Bookmark) error {
+func fetchBookmarks(bookmarks *[]Bookmark) error {
+	opt := option.WithCredentialsFile(cfg.AccountKeyFile)
+	ctx := context.Background()
+	app, err := firebase.NewApp(ctx, nil, opt)
+	if err != nil {
+		return fmt.Errorf("error initializing app: %v\n", err)
+	}
+
+	client, err := app.Firestore(ctx)
+	if err != nil {
+		return fmt.Errorf("error get client: %v\n", err)
+	}
+	defer client.Close()
+
+	iter := client.Collection("bookmarks").Documents(ctx)
+	var bookmark Bookmark
+
+	for {
+		doc, err := iter.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			return fmt.Errorf("failed to iterate: %v\n", err)
+		}
+
+		if err := doc.DataTo(&bookmark); err != nil {
+			return fmt.Errorf("failed to convert to Bookmark: %v\n", err)
+		}
+
+		*bookmarks = append(*bookmarks, bookmark)
+	}
+
+	return nil
+}
+
+func show(bookmarks *[]Bookmark) error {
 	var buf bytes.Buffer
 	var r string
 
-	for _, b := range bookmarks {
+	for _, b := range *bookmarks {
 		r += "[" + b.Title + "](" + b.Url + ")\n"
 	}
 
