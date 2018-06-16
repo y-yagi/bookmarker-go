@@ -29,12 +29,17 @@ const cmd = "bookmarker"
 
 type config struct {
 	AccountKeyFile string `toml:"account_key_file"`
+	Browser        string `toml:"browser"`
+	FilterCmd      string `toml:"filter_cmd"`
 }
+
+var cfg config
 
 func init() {
 	if !configure.Exist(cmd) {
-		var cfg config
 		cfg.AccountKeyFile = ""
+		cfg.Browser = "google-chrome"
+		cfg.FilterCmd = "peco"
 		configure.Save(cmd, cfg)
 	}
 }
@@ -49,7 +54,6 @@ func main() {
 		os.Exit(msg(cmdEdit()))
 	}
 
-	var cfg config
 	err := configure.Load(cmd, &cfg)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
@@ -125,7 +129,7 @@ func show(bookmarks []Bookmark) error {
 		r += "[" + b.Title + "](" + b.Url + ")\n"
 	}
 
-	if err := runFilter("peco", strings.NewReader(r), &buf); err != nil {
+	if err := runFilter(cfg.FilterCmd, strings.NewReader(r), &buf); err != nil {
 		return err
 	}
 
@@ -136,7 +140,7 @@ func show(bookmarks []Bookmark) error {
 	re := regexp.MustCompile(`\((.+?)\)\z`)
 	matched := re.FindAllStringSubmatch(strings.TrimSpace(buf.String()), -1)
 
-	return exec.Command("google-chrome", matched[0][1]).Run()
+	return exec.Command(cfg.Browser, matched[0][1]).Run()
 }
 
 func runFilter(command string, r io.Reader, w io.Writer) error {
