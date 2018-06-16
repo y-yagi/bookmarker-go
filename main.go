@@ -130,13 +130,13 @@ func fetchBookmarks(bookmarks *[]Bookmark) error {
 
 func show(bookmarks *[]Bookmark) error {
 	var buf bytes.Buffer
-	var r string
+	var text string
 
 	for _, b := range *bookmarks {
-		r += "[" + b.Title + "](" + b.URL + ")\n"
+		text += "[" + b.Title + "](" + b.URL + ")\n"
 	}
 
-	if err := runFilter(cfg.FilterCmd, strings.NewReader(r), &buf); err != nil {
+	if err := runFilter(cfg.FilterCmd, strings.NewReader(text), &buf); err != nil {
 		return err
 	}
 
