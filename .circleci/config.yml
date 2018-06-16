@@ -6,6 +6,8 @@ test: &test
     - run:
         name : Run dep
         command: |
+          go get -u github.com/golang/lint/golint
+          go get -u honnef.co/go/tools/cmd/megacheck
           go get -u github.com/golang/dep/cmd/dep
           dep ensure
     - run:
@@ -14,13 +16,11 @@ test: &test
     - run:
         name: Run lint
         command: |
-          go build ./vendor/github.com/golang/lint/golint
-          ./golint -set_exit_status
+          golint -set_exit_status
     - run:
         name: Run megacheck
         command: |
-          go build ./vendor/honnef.co/go/tools/cmd/megacheck
-          ./megacheck
+          megacheck
 
 jobs:
   go-1.9-test:
@@ -34,21 +34,6 @@ jobs:
       - image: circleci/golang:1.10
     working_directory: /go/src/github.com/y-yagi/bookmarker
     <<: *test
-
-
-  dep-update:
-    docker:
-      - image: circleci/golang:1.9
-    working_directory: /go/src/github.com/y-yagi/bookmarker
-
-    steps:
-      - checkout
-      - run:
-          name: Run ci-dep-update
-          command: |
-            go get -u github.com/golang/dep/cmd/dep
-            go get -u github.com/y-yagi/ci-dep-update
-            ci-dep-update -u y-yagi -r y-yagi/bookmarker
 
 workflows:
   version: 2
