@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"cloud.google.com/go/firestore"
 	firebase "firebase.google.com/go"
 	"github.com/y-yagi/configure"
 	"google.golang.org/api/iterator"
@@ -24,6 +25,7 @@ type Bookmark struct {
 	Title     string    `firestore:"title"`
 	URL       string    `firestore:"url"`
 	CreatedAt time.Time `firestore:"createdAt"`
+	Ref       *firestore.DocumentRef
 }
 
 const cmd = "bookmarker"
@@ -47,8 +49,10 @@ func init() {
 
 func main() {
 	var edit bool
+	var delete bool
 
 	flag.BoolVar(&edit, "c", false, "edit config")
+	flag.BoolVar(&edit, "d", false, "delete bookmark")
 	flag.Parse()
 
 	if edit {
@@ -76,7 +80,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := show(&bookmarks); err != nil {
+	if delete {
+		err = open(&bookmarks)
+	} else {
+		err = open(&bookmarks)
+	}
+
+	if err != nil {
 		fmt.Fprintf(os.Stderr, "%s: %v\n", os.Args[0], err)
 		os.Exit(1)
 	}
@@ -121,6 +131,7 @@ func fetchBookmarks(bookmarks *[]Bookmark) error {
 		if err := doc.DataTo(&bookmark); err != nil {
 			return fmt.Errorf("failed to convert to Bookmark: %v", err)
 		}
+		bookmark.Ref = doc.Ref
 
 		*bookmarks = append(*bookmarks, bookmark)
 	}
@@ -128,7 +139,19 @@ func fetchBookmarks(bookmarks *[]Bookmark) error {
 	return nil
 }
 
-func show(bookmarks *[]Bookmark) error {
+func open(bookmarks *[]Bookmark) error {
+	bookmark, err := selectBookmark(bookmarks)
+	if err != nil {
+		return err
+	}
+
+	re := regexp.MustCompile(`\((.+?)\)\z`)
+	matched := re.FindAllStringSubmatch(bookmark, -1)
+
+	return exec.Command(cfg.Browser, matched[0][1]).Run()
+}
+
+func selectBookmark(bookmarks *[]Bookmark) (string, error) {
 	var buf bytes.Buffer
 	var text string
 
@@ -137,17 +160,14 @@ func show(bookmarks *[]Bookmark) error {
 	}
 
 	if err := runFilter(cfg.FilterCmd, strings.NewReader(text), &buf); err != nil {
-		return err
+		return "", err
 	}
 
 	if buf.Len() == 0 {
-		return errors.New("No bookmark selected")
+		return "", errors.New("No bookmark selected")
 	}
 
-	re := regexp.MustCompile(`\((.+?)\)\z`)
-	matched := re.FindAllStringSubmatch(strings.TrimSpace(buf.String()), -1)
-
-	return exec.Command(cfg.Browser, matched[0][1]).Run()
+	return strings.TrimSpace(buf.String()), nil
 }
 
 func runFilter(command string, r io.Reader, w io.Writer) error {
