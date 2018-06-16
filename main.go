@@ -19,9 +19,10 @@ import (
 	"google.golang.org/api/option"
 )
 
+// Bookmark is a bookmark module.
 type Bookmark struct {
 	Title     string    `firestore:"title"`
-	Url       string    `firestore:"url"`
+	URL       string    `firestore:"url"`
 	CreatedAt time.Time `firestore:"createdAt"`
 }
 
@@ -96,12 +97,12 @@ func fetchBookmarks(bookmarks *[]Bookmark) error {
 	ctx := context.Background()
 	app, err := firebase.NewApp(ctx, nil, opt)
 	if err != nil {
-		return fmt.Errorf("error initializing app: %v\n", err)
+		return fmt.Errorf("rror initializing app: %v", err)
 	}
 
 	client, err := app.Firestore(ctx)
 	if err != nil {
-		return fmt.Errorf("error get client: %v\n", err)
+		return fmt.Errorf("error get client: %v", err)
 	}
 	defer client.Close()
 
@@ -114,11 +115,11 @@ func fetchBookmarks(bookmarks *[]Bookmark) error {
 			break
 		}
 		if err != nil {
-			return fmt.Errorf("failed to iterate: %v\n", err)
+			return fmt.Errorf("failed to iterate: %v", err)
 		}
 
 		if err := doc.DataTo(&bookmark); err != nil {
-			return fmt.Errorf("failed to convert to Bookmark: %v\n", err)
+			return fmt.Errorf("failed to convert to Bookmark: %v", err)
 		}
 
 		*bookmarks = append(*bookmarks, bookmark)
@@ -132,7 +133,7 @@ func show(bookmarks *[]Bookmark) error {
 	var r string
 
 	for _, b := range *bookmarks {
-		r += "[" + b.Title + "](" + b.Url + ")\n"
+		r += "[" + b.Title + "](" + b.URL + ")\n"
 	}
 
 	if err := runFilter(cfg.FilterCmd, strings.NewReader(r), &buf); err != nil {
