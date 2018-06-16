@@ -13,8 +13,8 @@ import (
 	"strings"
 	"time"
 
-	"cloud.google.com/go/firestore"
 	firebase "firebase.google.com/go"
+	tty "github.com/mattn/go-tty"
 	"github.com/y-yagi/configure"
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
@@ -25,7 +25,7 @@ type Bookmark struct {
 	Title     string    `firestore:"title"`
 	URL       string    `firestore:"url"`
 	CreatedAt time.Time `firestore:"createdAt"`
-	Ref       *firestore.DocumentRef
+	ID        string
 }
 
 const cmd = "bookmarker"
@@ -37,6 +37,7 @@ type config struct {
 }
 
 var cfg config
+var ctx context.Context
 
 func init() {
 	if !configure.Exist(cmd) {
@@ -52,7 +53,7 @@ func main() {
 	var delete bool
 
 	flag.BoolVar(&edit, "c", false, "edit config")
-	flag.BoolVar(&edit, "d", false, "delete bookmark")
+	flag.BoolVar(&delete, "d", false, "delete bookmark")
 	flag.Parse()
 
 	if edit {
@@ -75,15 +76,17 @@ func main() {
 	}
 
 	var bookmarks []Bookmark
+	ctx = context.Background()
+
 	if err = fetchBookmarks(&bookmarks); err != nil {
 		fmt.Printf("%v\n", err)
 		os.Exit(1)
 	}
 
 	if delete {
-		err = open(&bookmarks)
+		err = deleteBookmark(&bookmarks)
 	} else {
-		err = open(&bookmarks)
+		err = openBookmark(&bookmarks)
 	}
 
 	if err != nil {
@@ -104,10 +107,9 @@ func editConfig() error {
 
 func fetchBookmarks(bookmarks *[]Bookmark) error {
 	opt := option.WithCredentialsFile(cfg.AccountKeyFile)
-	ctx := context.Background()
 	app, err := firebase.NewApp(ctx, nil, opt)
 	if err != nil {
-		return fmt.Errorf("rror initializing app: %v", err)
+		return fmt.Errorf("error initializing app: %v", err)
 	}
 
 	client, err := app.Firestore(ctx)
@@ -131,7 +133,7 @@ func fetchBookmarks(bookmarks *[]Bookmark) error {
 		if err := doc.DataTo(&bookmark); err != nil {
 			return fmt.Errorf("failed to convert to Bookmark: %v", err)
 		}
-		bookmark.Ref = doc.Ref
+		bookmark.ID = doc.Ref.ID
 
 		*bookmarks = append(*bookmarks, bookmark)
 	}
@@ -139,16 +141,48 @@ func fetchBookmarks(bookmarks *[]Bookmark) error {
 	return nil
 }
 
-func open(bookmarks *[]Bookmark) error {
-	bookmark, err := selectBookmark(bookmarks)
+func openBookmark(bookmarks *[]Bookmark) error {
+	url, err := selectBookmark(bookmarks)
 	if err != nil {
 		return err
 	}
 
-	re := regexp.MustCompile(`\((.+?)\)\z`)
-	matched := re.FindAllStringSubmatch(bookmark, -1)
+	return exec.Command(cfg.Browser, url).Run()
+}
 
-	return exec.Command(cfg.Browser, matched[0][1]).Run()
+func deleteBookmark(bookmarks *[]Bookmark) error {
+	url, err := selectBookmark(bookmarks)
+	if err != nil {
+		return err
+	}
+
+	var target Bookmark
+
+	for _, b := range *bookmarks {
+		if b.URL == url {
+			target = b
+			break
+		}
+	}
+
+	opt := option.WithCredentialsFile(cfg.AccountKeyFile)
+	app, err := firebase.NewApp(ctx, nil, opt)
+	if err != nil {
+		return fmt.Errorf("error initializing app: %v", err)
+	}
+	client, err := app.Firestore(ctx)
+	if err != nil {
+		return fmt.Errorf("error get client: %v", err)
+	}
+	defer client.Close()
+
+	fmt.Printf("Will delete 「%v」. Are you sure?", target.Title)
+	answer, err := ask("Are you sure? (y/N)")
+	if answer == false || err != nil {
+		return err
+	}
+	_, err = client.Collection("bookmarks").Doc(target.ID).Delete(ctx)
+	return err
 }
 
 func selectBookmark(bookmarks *[]Bookmark) (string, error) {
@@ -167,7 +201,10 @@ func selectBookmark(bookmarks *[]Bookmark) (string, error) {
 		return "", errors.New("No bookmark selected")
 	}
 
-	return strings.TrimSpace(buf.String()), nil
+	re := regexp.MustCompile(`\((.+?)\)\z`)
+	matched := re.FindAllStringSubmatch(strings.TrimSpace(buf.String()), -1)
+
+	return matched[0][1], nil
 }
 
 func runFilter(command string, r io.Reader, w io.Writer) error {
@@ -182,4 +219,22 @@ func runFilter(command string, r io.Reader, w io.Writer) error {
 	cmd.Stdin = r
 
 	return cmd.Run()
+}
+
+func ask(prompt string) (bool, error) {
+	fmt.Print(prompt + ": ")
+	t, err := tty.Open()
+	if err != nil {
+		return false, err
+	}
+	defer t.Close()
+	var r rune
+	for r == 0 {
+		r, err = t.ReadRune()
+		if err != nil {
+			return false, err
+		}
+	}
+	fmt.Println()
+	return r == 'y' || r == 'Y', nil
 }
