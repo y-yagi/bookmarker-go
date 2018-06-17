@@ -12,15 +12,15 @@ test: &test
           dep ensure
     - run:
         name: Run vet
-        command: go vet
+        command: go vet ./cmd/bookmarker/main.go
     - run:
         name: Run lint
         command: |
-          golint -set_exit_status
+          golint -set_exit_status ./cmd/bookmarker/main.go
     - run:
         name: Run megacheck
         command: |
-          megacheck
+          megacheck ./cmd/bookmarker/main.go
 
 jobs:
   go-1.9-test:
