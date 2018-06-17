@@ -176,7 +176,7 @@ func deleteBookmark(client *firestore.Client, bookmarks *[]Bookmark) error {
 
 	fmt.Printf("Will delete 「%v」. Are you sure?", target.Title)
 	answer, err := ask("Are you sure? (y/N)")
-	if answer == false || err != nil {
+	if !answer || err != nil {
 		return err
 	}
 	_, err = client.Collection("bookmarks").Doc(target.ID).Delete(ctx)
