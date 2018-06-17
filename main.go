@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"cloud.google.com/go/firestore"
 	firebase "firebase.google.com/go"
 	tty "github.com/mattn/go-tty"
 	"github.com/y-yagi/configure"
@@ -77,14 +78,20 @@ func main() {
 
 	var bookmarks []Bookmark
 	ctx = context.Background()
+	client, err := generateClient()
+	if err != nil {
+		fmt.Printf("%v\n", err)
+		os.Exit(1)
+	}
+	defer client.Close()
 
-	if err = fetchBookmarks(&bookmarks); err != nil {
+	if err = fetchBookmarks(client, &bookmarks); err != nil {
 		fmt.Printf("%v\n", err)
 		os.Exit(1)
 	}
 
 	if delete {
-		err = deleteBookmark(&bookmarks)
+		err = deleteBookmark(client, &bookmarks)
 	} else {
 		err = openBookmark(&bookmarks)
 	}
@@ -105,19 +112,21 @@ func editConfig() error {
 	return configure.Edit(cmd, editor)
 }
 
-func fetchBookmarks(bookmarks *[]Bookmark) error {
+func generateClient() (*firestore.Client, error) {
 	opt := option.WithCredentialsFile(cfg.AccountKeyFile)
 	app, err := firebase.NewApp(ctx, nil, opt)
 	if err != nil {
-		return fmt.Errorf("error initializing app: %v", err)
+		return nil, fmt.Errorf("error initializing app: %v", err)
 	}
-
 	client, err := app.Firestore(ctx)
 	if err != nil {
-		return fmt.Errorf("error get client: %v", err)
+		return nil, fmt.Errorf("error get client: %v", err)
 	}
-	defer client.Close()
 
+	return client, nil
+}
+
+func fetchBookmarks(client *firestore.Client, bookmarks *[]Bookmark) error {
 	iter := client.Collection("bookmarks").Documents(ctx)
 	var bookmark Bookmark
 
@@ -150,7 +159,7 @@ func openBookmark(bookmarks *[]Bookmark) error {
 	return exec.Command(cfg.Browser, url).Run()
 }
 
-func deleteBookmark(bookmarks *[]Bookmark) error {
+func deleteBookmark(client *firestore.Client, bookmarks *[]Bookmark) error {
 	url, err := selectBookmark(bookmarks)
 	if err != nil {
 		return err
@@ -164,17 +173,6 @@ func deleteBookmark(bookmarks *[]Bookmark) error {
 			break
 		}
 	}
-
-	opt := option.WithCredentialsFile(cfg.AccountKeyFile)
-	app, err := firebase.NewApp(ctx, nil, opt)
-	if err != nil {
-		return fmt.Errorf("error initializing app: %v", err)
-	}
-	client, err := app.Firestore(ctx)
-	if err != nil {
-		return fmt.Errorf("error get client: %v", err)
-	}
-	defer client.Close()
 
 	fmt.Printf("Will delete 「%v」. Are you sure?", target.Title)
 	answer, err := ask("Are you sure? (y/N)")
