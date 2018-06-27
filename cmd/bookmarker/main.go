@@ -127,7 +127,7 @@ func generateClient() (*firestore.Client, error) {
 }
 
 func fetchBookmarks(client *firestore.Client, bookmarks *[]Bookmark) error {
-	iter := client.Collection("bookmarks").Documents(ctx)
+	iter := client.Collection("bookmarks").OrderBy("createdAt", firestore.Asc).Documents(ctx)
 	var bookmark Bookmark
 
 	for {
