@@ -17,6 +17,7 @@ import (
 	firebase "firebase.google.com/go"
 	tty "github.com/mattn/go-tty"
 	"github.com/y-yagi/configure"
+	"github.com/y-yagi/dlogger"
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
 )
@@ -39,6 +40,7 @@ type config struct {
 
 var cfg config
 var ctx context.Context
+var logger *dlogger.DebugLogger
 
 func init() {
 	if !configure.Exist(cmd) {
@@ -52,6 +54,7 @@ func init() {
 func main() {
 	var edit bool
 	var delete bool
+	logger = dlogger.New(os.Stdout)
 
 	flag.BoolVar(&edit, "c", false, "edit config")
 	flag.BoolVar(&delete, "d", false, "delete bookmark")
@@ -156,6 +159,7 @@ func openBookmark(bookmarks *[]Bookmark) error {
 		return err
 	}
 
+	logger.Printf("URL: '%v'\n", url)
 	return exec.Command(cfg.Browser, url).Run()
 }
 
@@ -199,10 +203,10 @@ func selectBookmark(bookmarks *[]Bookmark) (string, error) {
 		return "", errors.New("No bookmark selected")
 	}
 
-	re := regexp.MustCompile(`\((.+?)\)\z`)
+	re := regexp.MustCompile(`\((.+?)\)`)
 	matched := re.FindAllStringSubmatch(strings.TrimSpace(buf.String()), -1)
 
-	return matched[0][1], nil
+	return matched[len(matched)-1][1], nil
 }
 
 func runFilter(command string, r io.Reader, w io.Writer) error {
