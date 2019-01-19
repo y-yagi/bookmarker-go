@@ -200,7 +200,7 @@ func selectBookmark(bookmarks *[]Bookmark) (string, error) {
 	}
 
 	if buf.Len() == 0 {
-		return "", errors.New("No bookmark selected")
+		return "", errors.New("no bookmark selected")
 	}
 
 	re := regexp.MustCompile(`\((.+?)\)`)
