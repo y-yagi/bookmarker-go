@@ -4,34 +4,30 @@ test: &test
   steps:
     - checkout
     - run:
-        name : Run dep
+        name: Run go mod
         command: |
-          go get -u github.com/golang/lint/golint
-          go get -u honnef.co/go/tools/cmd/megacheck
-          go get -u github.com/golang/dep/cmd/dep
-          dep ensure
+          go mod download
+          go mod vendor
     - run:
         name: Run vet
         command: go vet ./cmd/bookmarker/main.go
     - run:
         name: Run lint
         command: |
-          golint -set_exit_status ./cmd/bookmarker/main.go
+          go get -u github.com/golang/lint/golint
+          golint -set_exit_status $(go list ./... | grep -v /vendor/)
     - run:
-        name: Run megacheck
+        name: Run staticcheck
         command: |
-          megacheck ./cmd/bookmarker/main.go
+          go get -u honnef.co/go/tools/cmd/staticcheck
+          GO111MODULE=off staticcheck ./...
 
 jobs:
-  go-1.9-test:
+  go-1.11-test:
     docker:
-      - image: circleci/golang:1.9
-    working_directory: /go/src/github.com/y-yagi/bookmarker
-    <<: *test
-
-  go-1.10-test:
-    docker:
-      - image: circleci/golang:1.10
+      - image: circleci/golang:1.11
+        environment:
+          GO111MODULE: "on"
     working_directory: /go/src/github.com/y-yagi/bookmarker
     <<: *test
 
@@ -39,5 +35,4 @@ workflows:
   version: 2
   build:
     jobs:
-      - go-1.9-test
-      - go-1.10-test
+      - go-1.11-test
