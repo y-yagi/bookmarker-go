@@ -60,6 +60,12 @@ func main() {
 	flag.BoolVar(&delete, "d", false, "delete bookmark")
 	flag.Parse()
 
+	if flag.NArg() != 0 {
+		fmt.Printf("Usage: %s\n", cmd)
+		flag.PrintDefaults()
+		os.Exit(2)
+	}
+
 	if edit {
 		if err := editConfig(); err != nil {
 			fmt.Printf("%v\n", err)
