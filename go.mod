@@ -1,25 +1,26 @@
 module github.com/y-yagi/bookmarker-go
 
 require (
-	cloud.google.com/go v0.23.0
-	firebase.google.com/go v3.1.0+incompatible
-	github.com/BurntSushi/toml v0.3.0 // indirect
-	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b // indirect
-	github.com/golang/protobuf v1.1.0 // indirect
-	github.com/google/go-cmp v0.2.0 // indirect
-	github.com/googleapis/gax-go v2.0.0+incompatible // indirect
-	github.com/mattn/go-isatty v0.0.4 // indirect
-	github.com/mattn/go-tty v0.0.0-20180219170247-931426f7535a
-	github.com/y-yagi/configure v0.0.0-20180520001601-af8c97d6cdf2
+	cloud.google.com/go v0.47.0
+	cloud.google.com/go/firestore v1.0.0
+	cloud.google.com/go/storage v1.1.2 // indirect
+	firebase.google.com/go v3.9.0+incompatible
+	github.com/golang/groupcache v0.0.0-20191027212112-611e8accdfc9 // indirect
+	github.com/googleapis/gax-go v2.0.2+incompatible // indirect
+	github.com/jstemmer/go-junit-report v0.9.1 // indirect
+	github.com/mattn/go-isatty v0.0.10 // indirect
+	github.com/mattn/go-tty v0.0.0-20190424173100-523744f04859
+	github.com/y-yagi/configure v0.2.0
 	github.com/y-yagi/dlogger v0.1.1
-	go.opencensus.io v0.13.0 // indirect
-	golang.org/x/net v0.0.0-20180611182652-db08ff08e862 // indirect
-	golang.org/x/oauth2 v0.0.0-20180603041954-1e0a3fa8ba9a // indirect
-	golang.org/x/sync v0.0.0-20181221193216-37e7f081c4d4 // indirect
-	golang.org/x/sys v0.0.0-20180831094639-fa5fdf94c789 // indirect
-	golang.org/x/text v0.3.0 // indirect
-	google.golang.org/api v0.0.0-20180614000435-2eea9ba0a3d9
-	google.golang.org/appengine v1.0.0 // indirect
-	google.golang.org/genproto v0.0.0-20180608181217-32ee49c4dd80 // indirect
-	google.golang.org/grpc v1.12.2 // indirect
+	go.opencensus.io v0.22.1 // indirect
+	golang.org/x/exp v0.0.0-20191024150812-c286b889502e // indirect
+	golang.org/x/net v0.0.0-20191028085509-fe3aa8a45271 // indirect
+	golang.org/x/sys v0.0.0-20191028164358-195ce5e7f934 // indirect
+	golang.org/x/tools v0.0.0-20191028215554-80f3f9ca0853 // indirect
+	google.golang.org/api v0.13.0
+	google.golang.org/appengine v1.6.5 // indirect
+	google.golang.org/genproto v0.0.0-20191028173616-919d9bdd9fe6 // indirect
+	google.golang.org/grpc v1.24.0 // indirect
 )
+
+go 1.13
